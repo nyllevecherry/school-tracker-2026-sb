@@ -2,18 +2,22 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="wiht=device-widht, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Tracker 2026 - Portal</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="favicon_avelino.ico" type="image/x-icon">
-   <style>
+   
+    <!-- CLIENTE SDK SUPABASE -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
         body {
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
             text-align: center;
-            background-color: var(--bg-color); /* Usando sua variável do style.css */
+            background-color: var(--bg-color);
         }
         .menu-container {
             background: var(--card-bg);
@@ -65,7 +69,7 @@
         }
         .btn-submit {
             padding: 12px;
-            background: #10b981; /* Verde profissional para o botão de entrar */
+            background: #10b981;
             color: white;
             border: none;
             border-radius: 8px;
@@ -88,7 +92,7 @@
 
         /* --- MENU PRINCIPAL (INICIALMENTE ESCONDIDO) --- */
         .btn-group {
-            display: none; /* Escondido até o login estar correto */
+            display: none;
             flex-direction: column;
             gap: 20px;
         }
@@ -109,46 +113,89 @@
     </style>
 </head>
 <body>
+
     <div class="menu-container">
         <img src="logo.png" alt="Logo do Colégio" class="logo-colegio">
-
+       
         <h1>School Tracker</h1>
-        
+       
         <form id="loginForm" class="login-form">
-           <div class="input-group">
-               <label for="usuario">E-mail de Acesso</label>label>
-               <input type="email" id="usuario" required placeholder="Ex: professor@escola.com">
-           </div>
-           <div class="input.group">
-               <label for="senha">Chave de Segurança</label>
-               <input type="password" id="senha" required placeholder="........">
-           </div>
-           <button type="submit" class="bnt-submit">Autenticar Portal</button>button>
+            <div class="input-group">
+                <label for="usuario">E-mail de Acesso</label>
+                <input type="email" id="usuario" required placeholder="Ex: professor@escola.com">
+            </div>
+            <div class="input-group">
+                <label for="senha">Chave de Segurança</label>
+                <input type="password" id="senha" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-submit">Autenticar Portal</button>
             <div id="mensagemErro" class="error-message">Acesso negado. Credenciais incorretas!</div>
         </form>
-
+       
         <div id="menuBotoes" class="btn-group">
-            <a href="scanner.html" class="btn btn-scanner">Abrir Sscanner (Entrada/Saída)</a>
-            <a href="telao.html" class="btn btn-telao">Abrir Dashborad (Telão)</a>
+            <a href="scanner.html" class="btn btn-scanner">📸 Abrir Scanner (Entrada/Saída)</a>
+            <a href="telao.html" class="btn btn-telao">🖥️ Abrir Dashboard (Telão)</a>
         </div>
+       
+        <p>Colégio Avelino Antonio Vieira - 2026 - <span class="neon-blue">Client Mode</span></p>
+    </div>
 
-    <script type="module">
-        // TODO: Importar funções de Auth do Firebase CDN (v10)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js&quot;;
-        // import { ... } from "https://www.gstatic.com/.../firebase-auth.js&quot;;
+    <script>
+        /* =========================================================
+           INICIALIZAÇÃO DO SUPABASE
+           ========================================================= */
+        const SUPABASE_URL = 'https://jrdzgddszylausmwgrxw.supabase.co&#39;;
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZHpnZGRzenlsYXVzbXdncnh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NzAwNDgsImV4cCI6MjEwNzE0NjA0OH0.6a9pbuSuabu9yP5zdtlemeIQYTXIB4ArauayEi5N-BY';
 
-        const firebaseConfig = { /* TODO: Preencher com credenciais do projeto */ };
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: false }
+        });
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        // Limpa canais órfãos ao carregar o portal de login
+        if (supabaseClient) {
+            supabaseClient.removeAllChannels();
+        }
 
         const form = document.getElementById('loginForm');
+        const botoes = document.getElementById('menuBotoes');
+        const erro = document.getElementById('mensagemErro');
 
-        form.addEventListener('submit', function(event) {
-            // TODO: Evitar o recarregamento padrão da página ao enviar o formulário
-           
-            // TODO: Executar o método de login por e-mail e senha no Firebase
-            // signInWithEmailAndPassword(...)
+        // Se já estiver logado na sessão, exibe o menu diretamente
+        if (sessionStorage.getItem('logado') === 'true') {
+            form.style.display = "none";
+            botoes.style.display = "flex";
+        }
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('usuario').value.trim();
+            const password = document.getElementById('senha').value.trim();
+
+            erro.style.display = "none";
+
+            try {
+                // Autenticação via Supabase Auth
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                if (data.user) {
+                    sessionStorage.setItem('logado', 'true');
+                    form.style.display = "none";
+                    botoes.style.display = "flex";
+                }
+            } catch (err) {
+                console.error("Erro na autenticação Supabase:", err.message);
+                erro.innerText = "Acesso negado. Credenciais incorretas!";
+                erro.style.display = "block";
+                document.getElementById('senha').value = "";
+            }
         });
     </script>
 </body>
